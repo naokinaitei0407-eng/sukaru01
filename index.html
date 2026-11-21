@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ドクロと宝石の石版</title>
+<style>
+  :root { --wood:#5b3a21; --felt:#0f5a3c; --felt2:#0a4430; --gold:#e8c35a; --ink:#f6efe0; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; min-height:100%; background:#1a120b; color:var(--ink);
+    font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; }
+  body { display:flex; justify-content:center; }
+  #app { width:100%; max-width:520px; min-height:100vh; padding:8px; position:relative; }
+  .hidden { display:none !important; }
+  h1 { font-size:22px; margin:0 0 6px; text-align:center; color:var(--gold); letter-spacing:.05em; }
+  .sub { font-size:13px; opacity:.85; line-height:1.7; text-align:center; margin-bottom:12px; }
+  .panel { background:#2a1d12; border:2px solid var(--wood); border-radius:14px; padding:14px; margin-bottom:10px; }
+  label { font-size:12px; opacity:.8; display:block; margin:8px 0 4px; }
+  input { font:inherit; padding:12px; border-radius:10px; border:2px solid var(--wood); background:#fff7e6; color:#222; width:100%; }
+  button { font:inherit; font-weight:800; border:0; border-radius:12px; padding:13px 14px; color:#fff; background:#8a5a2b; cursor:pointer; touch-action:manipulation; }
+  button:active { transform:scale(.97); }
+  button:disabled { opacity:.4; }
+  button.gold { background:var(--gold); color:#2b1b0c; }
+  button.red { background:#b3402f; }
+  button.gray { background:#555; }
+  button.full { width:100%; margin-top:8px; }
+  button.small { padding:6px 10px; font-size:13px; }
+  .row { display:flex; gap:8px; margin-top:8px; }
+  .row > input { flex:1; }
+  hr { border:0; border-top:1px solid #5b3a21; margin:14px 0; }
+  details { font-size:13px; line-height:1.7; margin-top:10px; }
+  summary { cursor:pointer; color:var(--gold); font-weight:700; }
+  details ul { padding-left:18px; margin:6px 0; }
+  .code { font-size:44px; font-weight:900; letter-spacing:.25em; color:var(--gold); text-align:center; margin:6px 0; }
+  .plist { list-style:none; padding:0; margin:8px 0; }
+  .plist li { display:flex; justify-content:space-between; align-items:center; background:#3a2a1a; border-radius:8px; padding:8px 10px; margin-bottom:6px; }
+
+  #topbar { display:flex; justify-content:space-between; align-items:center; padding:2px 4px 6px; font-size:13px; }
+
+  #table { background:radial-gradient(ellipse at center,var(--felt) 0%,var(--felt2) 100%);
+    border:10px solid var(--wood); border-radius:22px; padding:8px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.6),0 6px 18px rgba(0,0,0,.6); min-height:calc(100vh - 56px); }
+  .opps { display:flex; gap:6px; justify-content:center; --ts:30px; }
+  .seat { flex:1; min-width:0; background:rgba(0,0,0,.22); border:2px solid transparent; border-radius:12px; padding:6px 4px; text-align:center; transition:.2s; }
+  .seat.turn { border-color:var(--gold); box-shadow:0 0 14px rgba(232,195,90,.6); }
+  .seat.out { opacity:.35; filter:grayscale(1); }
+  .seat.passed .nm::after { content:" (パス)"; font-size:11px; opacity:.8; }
+  .nm { font-weight:800; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cpu { font-size:10px; background:#444; border-radius:6px; padding:1px 4px; margin-left:3px; vertical-align:middle; }
+  .meta { font-size:11px; opacity:.85; }
+  .cards { display:flex; justify-content:center; gap:4px; margin:4px 0; }
+  .cslot { width:26px; height:36px; border-radius:4px; border:1px solid #7a5a1a; overflow:hidden; background:repeating-linear-gradient(45deg,#7a1f2b,#7a1f2b 4px,#5a1420 4px,#5a1420 8px); }
+  .cslot svg { width:100%; height:100%; display:block; }
+  .me .cslot { width:34px; height:48px; }
+
+  .pile { display:flex; justify-content:center; min-height:calc(var(--ts) + 6px); margin:4px 0; padding-left:calc(var(--ts)*.35); align-items:center; }
+  .pile .tile { margin-left:calc(var(--ts)*-.35); }
+  .tile { width:var(--ts); height:var(--ts); border-radius:50%; position:relative; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 5px rgba(0,0,0,.55),inset 0 0 0 2px rgba(0,0,0,.25); }
+  .tile.down { background:radial-gradient(circle at 35% 30%,#b9ab94,#7d705d 60%,#5e5343); }
+  .tile.down::after { content:""; position:absolute; inset:20%; border-radius:50%; border:2px solid rgba(0,0,0,.28); }
+  .tile.up { background:radial-gradient(circle at 35% 30%,#f4ead3,#cdbd98 70%,#a99a76); }
+  .tile.up.skull { background:radial-gradient(circle at 35% 30%,#55555e,#23232a); }
+  .tile svg { width:68%; height:68%; }
+  .tile .peek { position:absolute; right:-4px; bottom:-4px; width:44%; height:44%; border-radius:50%; background:rgba(0,0,0,.72); display:flex; align-items:center; justify-content:center; z-index:2; }
+  .tile .peek svg { width:78%; height:78%; }
+  .tile.pop { animation:pop .55s; }
+  @keyframes pop { 0% { transform:scale(.3) rotateY(90deg); } 70% { transform:scale(1.25); } 100% { transform:none; } }
+  .flippable { cursor:pointer; }
+  .tile.target { outline:3px solid var(--gold); animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { outline-color:transparent; } }
+
+  .center { text-align:center; padding:4px 6px; }
+  .banner { font-size:15px; font-weight:800; line-height:1.5; min-height:46px; display:flex; align-items:center; justify-content:center; }
+  .bidbox { display:inline-flex; align-items:center; gap:8px; background:rgba(0,0,0,.35); border:1px solid var(--gold); border-radius:12px; padding:6px 12px; font-size:14px; margin-top:4px; }
+  .bidbox b { font-size:22px; color:var(--gold); }
+  .heart { color:#ff4d5e; font-size:24px; display:inline-block; animation:beat 1s infinite; }
+  @keyframes beat { 0%,100% { transform:scale(1); } 15% { transform:scale(1.35); } 30% { transform:scale(1); } 45% { transform:scale(1.2); } }
+
+  .me { --ts:46px; }
+  .handlabel { font-size:11px; opacity:.8; margin-top:6px; }
+  .hand { display:flex; justify-content:center; gap:10px; min-height:calc(var(--ts) + 8px); margin:4px 0; }
+  .hand .tile { cursor:pointer; }
+  .hand.off .tile { opacity:.45; cursor:default; }
+  .acts { display:flex; gap:8px; justify-content:center; align-items:center; margin-top:6px; flex-wrap:wrap; }
+  .stepper { display:flex; align-items:center; gap:6px; }
+  .stepper button { width:42px; padding:10px 0; font-size:20px; }
+  .num { min-width:34px; text-align:center; font-size:28px; font-weight:900; color:var(--gold); }
+
+  .ov { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; pointer-events:none; padding:16px; }
+  .ov.block { pointer-events:auto; background:rgba(0,0,0,.6); }
+  .ovbox { background:#2a1d12; border:3px solid var(--gold); border-radius:16px; padding:16px; text-align:center; max-width:340px; width:100%; box-shadow:0 8px 30px rgba(0,0,0,.7); pointer-events:auto; }
+  .ovbox h2 { margin:0 0 8px; font-size:20px; color:var(--gold); }
+  .ovbox p { margin:6px 0; font-size:14px; line-height:1.6; }
+  .bigcard { width:120px; height:156px; margin:8px auto; border:3px solid #c9a23a; border-radius:8px; overflow:hidden; background:#fff; animation:pop .6s; box-shadow:0 0 18px rgba(232,195,90,.7); }
+  .bigcard svg { width:100%; height:100%; display:block; }
+  .cardname { font-weight:800; font-size:16px; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#000d; color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; z-index:30; display:none; max-width:90vw; text-align:center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar" class="hidden"><span id="roomLabel"></span><button id="muteBtn" class="gray small">🔊 音あり</button></div>
+
+  <!-- ロビー -->
+  <section id="lobby" class="panel">
+    <h1>ドクロと宝石の石版</h1>
+    <div class="sub">石版を置いて、数を宣言して、偉人カードを2枚そろえよう。<br>最大4人でオンライン対戦できます。</div>
+    <label for="name">あなたの名前(8文字まで)</label>
+    <input id="name" maxlength="8" placeholder="なまえ">
+    <button class="gold full" id="soloBtn">ひとりで練習(CPU3人と対戦)</button>
+    <hr>
+    <button class="full" id="createBtn">部屋を作る(友達と対戦)</button>
+    <div class="row"><input id="code" maxlength="4" placeholder="合言葉4文字" autocapitalize="characters"><button id="joinBtn">部屋に入る</button></div>
+    <details>
+      <summary>ルールを見る</summary>
+      <ul>
+        <li>石版は1人4枚。宝石が3枚、ドクロが1枚(置くまで自分だけが中身を知っています)。</li>
+        <li>最初に全員が1枚ずつ、伏せて置きます。</li>
+        <li>そのあとは順番に「石版を1枚置く」か「宣言する」のどちらか。</li>
+        <li>宣言は、場に出ている石版の枚数までの数。次の人から順に、もっと大きい数に上げるか、パスします。最後まで残った人が挑戦者です。</li>
+        <li>挑戦者は宣言した枚数だけめくります。まず自分の石版を上から順に、足りなければ他の人の石版を1つずつ選んでめくります。</li>
+        <li>全部宝石なら成功。偉人カードを1枚めくれて、<b>2枚そろえたら勝ち</b>。</li>
+        <li>ドクロが出たら失敗。自分の石版からランダムに1枚を失い、<b>4枚すべて失うと負け</b>です。</li>
+        <li>1回の勝負が終わると、石版は全員の手元に戻って再開します。</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 部屋(待機) -->
+  <section id="room" class="panel hidden">
+    <h1 id="roomTitle">部屋</h1>
+    <div id="roomBody"></div>
+  </section>
+
+  <!-- ゲーム -->
+  <section id="game" class="hidden"></section>
+</div>
+<div id="toast"></div>
+
+<script>
+//ENGINE_START
+var Engine = (function () {
+  function rnd(n) { return Math.floor(Math.random() * n); }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = rnd(i + 1); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function err(m) { return { ok: false, msg: m }; }
+  function ev(S, o) { o.id = ++S.evSeq; S.events.push(o); }
+  function nextActive(S, from) {
+    var n = S.players.length;
+    for (var k = 1; k <= n; k++) { var i = (from + k) % n; if (!S.players[i].out) return i; }
+    return from;
+  }
+  function activeSeats(S) {
+    var r = [];
+    for (var i = 0; i < S.players.length; i++) if (!S.players[i].out) r.push(i);
+    return r;
+  }
+  function total(S) {
+    var s = 0;
+    S.players.forEach(function (p) { if (!p.out) s += p.stack.length; });
+    return s;
+  }
+
+  function startRound(S, starter) {
+    S.phase = 'place1';
+    S.starter = starter;
+    S.turn = starter;
+    S.placedFirst = S.players.map(function (p) { return p.out; });
+    S.bid = null; S.challenger = -1; S.toFlip = 0; S.flipCount = 0; S.result = null; S.loss = null;
+  }
+
+  function createGame(list) {
+    var S = { evSeq: 0, events: [], rev: 0, players: [], deck: shuffle([0, 1, 2, 3, 4, 5, 6, 7]), winner: -1, loss: null };
+    list.forEach(function (p) {
+      S.players.push({ name: p.name, bot: !!p.bot, hand: ['gem', 'gem', 'gem', 'skull'], stack: [], cards: [], out: false, passed: false });
+    });
+    startRound(S, rnd(S.players.length));
+    return S;
+  }
+
+  function nextBidder(S, from) {
+    var n = S.players.length;
+    for (var k = 1; k <= n; k++) {
+      var i = (from + k) % n, p = S.players[i];
+      if (p.out) continue;
+      if (i === S.bid.by || !p.passed) return i;
+    }
+    return S.bid.by;
+  }
+
+  function pendingOwn(S) {
+    if (S.phase !== 'flipping') return false;
+    if (S.flipCount >= S.toFlip) return false;
+    var ch = S.players[S.challenger];
+    for (var i = 0; i < ch.stack.length; i++) if (!ch.stack[i].up) return true;
+    return false;
+  }
+
+  function startFlip(S) {
+    S.phase = 'flipping';
+    S.challenger = S.bid.by;
+    S.turn = S.challenger;
+    S.toFlip = S.bid.n;
+    S.flipCount = 0;
+    ev(S, { k: 'flipstart', seat: S.challenger, n: S.toFlip });
+  }
+
+  function resolveSuccess(S) {
+    var ch = S.players[S.challenger];
+    var face = S.deck.length ? S.deck.pop() : 0;
+    ch.cards.push(face);
+    S.result = { ok: true, seat: S.challenger, face: face };
+    ev(S, { k: 'success', seat: S.challenger, face: face });
+    if (ch.cards.length >= 2) {
+      S.phase = 'over'; S.winner = S.challenger;
+      ev(S, { k: 'win', seat: S.challenger });
+    } else {
+      S.phase = 'result';
+    }
+  }
+
+  function resolveFail(S, skullSeat) {
+    var ch = S.players[S.challenger];
+    var owned = ch.hand.slice();
+    ch.stack.forEach(function (s) { owned.push(s.t); });
+    var lost = owned[rnd(owned.length)];
+    S.loss = { seat: S.challenger, t: lost };
+    S.result = { ok: false, seat: S.challenger, skullSeat: skullSeat, eliminated: owned.length === 1 };
+    S.phase = 'result';
+    ev(S, { k: 'fail', seat: S.challenger, skullSeat: skullSeat });
+  }
+
+  function flipTop(S, seat) {
+    var st = S.players[seat].stack, idx = -1;
+    for (var i = st.length - 1; i >= 0; i--) if (!st[i].up) { idx = i; break; }
+    if (idx < 0) return false;
+    st[idx].up = true;
+    S.flipCount++;
+    ev(S, { k: 'flip', seat: seat, idx: idx, t: st[idx].t });
+    if (st[idx].t === 'skull') resolveFail(S, seat);
+    else if (S.flipCount >= S.toFlip) resolveSuccess(S);
+    return true;
+  }
+
+  function tick(S) {
+    S.rev++;
+    if (pendingOwn(S)) { flipTop(S, S.challenger); return true; }
+    return false;
+  }
+
+  function nextRound(S) {
+    if (S.phase !== 'result') return false;
+    S.rev++;
+    S.players.forEach(function (p, i) {
+      if (p.out) return;
+      p.stack.forEach(function (s) { p.hand.push(s.t); });
+      p.stack = [];
+      p.passed = false;
+      if (S.loss && S.loss.seat === i) {
+        var k = p.hand.indexOf(S.loss.t);
+        if (k >= 0) p.hand.splice(k, 1);
+      }
+      if (p.hand.length === 0) p.out = true;
+    });
+    var ch = S.challenger;
+    var act = activeSeats(S);
+    if (act.length <= 1) {
+      S.phase = 'over'; S.winner = act.length ? act[0] : ch; S.result = S.result || null;
+      ev(S, { k: 'win', seat: S.winner });
+      return true;
+    }
+    var starter = S.players[ch].out ? nextActive(S, ch) : ch;
+    startRound(S, starter);
+    return true;
+  }
+
+  function doFlip(S, seat, target) {
+    if (S.phase !== 'flipping' || seat !== S.challenger) return err('いまはめくれません');
+    if (pendingOwn(S)) return err('先に自分の石版がめくられます');
+    var t = S.players[target];
+    if (!t || target === seat || t.out) return err('その石版はめくれません');
+    var has = false;
+    t.stack.forEach(function (s) { if (!s.up) has = true; });
+    if (!has) return err('めくれる石版がありません');
+    flipTop(S, target);
+    return { ok: true };
+  }
+
+  function act(S, seat, a) {
+    S.rev++;
+    if (!a || S.phase === 'over' || S.phase === 'result') return err('いまは操作できません');
+    var P = S.players[seat];
+    if (!P || P.out) return err('操作できません');
+    if (a.k === 'flip') return doFlip(S, seat, a.seat);
+    if (S.turn !== seat) return err('あなたの番ではありません');
+    var n = total(S);
+
+    if (a.k === 'place') {
+      if (S.phase !== 'place1' && S.phase !== 'turn') return err('いまは石版を置けません');
+      var i = P.hand.indexOf(a.t);
+      if (i < 0) return err('その石版は手元にありません');
+      P.hand.splice(i, 1);
+      P.stack.push({ t: a.t, up: false });
+      ev(S, { k: 'place', seat: seat });
+      if (S.phase === 'place1') {
+        S.placedFirst[seat] = true;
+        var nx = -1;
+        for (var k = 1; k <= S.players.length; k++) {
+          var j = (seat + k) % S.players.length;
+          if (!S.placedFirst[j]) { nx = j; break; }
+        }
+        if (nx < 0) { S.phase = 'turn'; S.turn = S.starter; } else S.turn = nx;
+      } else {
+        S.turn = nextActive(S, seat);
+      }
+      return { ok: true };
+    }
+
+    if (a.k === 'bid') {
+      var nn = a.n | 0;
+      if (S.phase === 'turn') {
+        if (nn < 1 || nn > n) return err('その数は宣言できません');
+        S.bid = { n: nn, by: seat };
+        S.players.forEach(function (p) { p.passed = false; });
+        S.phase = 'bidding';
+        ev(S, { k: 'declare', seat: seat, n: nn });
+      } else if (S.phase === 'bidding') {
+        if (nn <= S.bid.n || nn > n) return err('いまの宣言より大きい数にしてください');
+        S.bid = { n: nn, by: seat };
+        ev(S, { k: 'raise', seat: seat, n: nn });
+      } else {
+        return err('いまは宣言できません');
+      }
+      if (nn >= n) startFlip(S);
+      else {
+        var nb = nextBidder(S, seat);
+        if (nb === S.bid.by) startFlip(S); else S.turn = nb;
+      }
+      return { ok: true };
+    }
+
+    if (a.k === 'pass') {
+      if (S.phase !== 'bidding' || seat === S.bid.by) return err('いまはパスできません');
+      P.passed = true;
+      ev(S, { k: 'pass', seat: seat });
+      var nb2 = nextBidder(S, seat);
+      if (nb2 === S.bid.by) startFlip(S); else S.turn = nb2;
+      return { ok: true };
+    }
+    return err('不明な操作です');
+  }
+
+  /* ---- CPU ---- */
+  function safeTop(P) {
+    var c = 0;
+    for (var i = P.stack.length - 1; i >= 0; i--) { if (P.stack[i].t === 'gem') c++; else break; }
+    return c;
+  }
+  function placeAct(P) {
+    var hasGem = P.hand.indexOf('gem') >= 0, hasSkull = P.hand.indexOf('skull') >= 0;
+    var t = !hasGem ? 'skull' : (hasSkull && Math.random() < 0.22 ? 'skull' : 'gem');
+    return { k: 'place', t: t };
+  }
+  function botAct(S, seat) {
+    var P = S.players[seat], T = total(S), alive = activeSeats(S).length;
+    if (S.phase === 'place1') return placeAct(P);
+    if (S.phase === 'turn') {
+      var safe = safeTop(P), extra = T - alive;
+      var pBid = P.hand.length === 0 ? 1 : Math.min(0.8, 0.08 + 0.2 * extra);
+      if (Math.random() < pBid) {
+        var n = Math.max(1, Math.min(T, safe + (Math.random() < 0.35 ? 1 : 0)));
+        return { k: 'bid', n: n };
+      }
+      return placeAct(P);
+    }
+    if (S.phase === 'bidding') {
+      var want = safeTop(P) + Math.floor((T - P.stack.length) * 0.5);
+      if (S.bid.n + 1 <= Math.min(want, T) && Math.random() < 0.55) return { k: 'bid', n: S.bid.n + 1 };
+      return { k: 'pass' };
+    }
+    if (S.phase === 'flipping') {
+      if (pendingOwn(S)) return null;
+      var c = [];
+      S.players.forEach(function (p, i) {
+        if (i === seat || p.out) return;
+        for (var q = 0; q < p.stack.length; q++) if (!p.stack[q].up) { c.push(i); return; }
+      });
+      if (!c.length) return null;
+      return { k: 'flip', seat: c[rnd(c.length)] };
+    }
+    return null;
+  }
+
+  /* ---- 各プレイヤー向けの見え方(相手の伏せた石版の中身は送らない) ---- */
+  function makeView(S, seat) {
+    var v = {
+      rev: S.rev, you: seat, phase: S.phase, turn: S.turn, starter: S.starter, bid: S.bid, total: total(S),
+      challenger: S.challenger, toFlip: S.toFlip, flipCount: S.flipCount, winner: S.winner, result: null,
+      ev: S.events.slice(), pendingOwn: pendingOwn(S), players: [], myHand: S.players[seat].hand.slice()
+    };
+    if (S.result) v.result = { ok: S.result.ok, seat: S.result.seat, face: S.result.face, skullSeat: S.result.skullSeat, eliminated: S.result.eliminated };
+    S.players.forEach(function (p, i) {
+      v.players.push({
+        name: p.name, bot: p.bot, out: p.out, passed: p.passed, cards: p.cards.slice(), handCount: p.hand.length,
+        stack: p.stack.map(function (s) { return { up: s.up, t: (s.up || i === seat) ? s.t : null }; })
+      });
+    });
+    return v;
+  }
+
+  return { createGame: createGame, act: act, tick: tick, nextRound: nextRound, botAct: botAct,
+           makeView: makeView, pendingOwn: pendingOwn, total: total, activeSeats: activeSeats };
+})();
+if (typeof module !== 'undefined') module.exports = Engine;
+//ENGINE_END
+
+/* ========================= 画面 ========================= */
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  var ui = { role: null, view: null, n: 1, nKey: '', lastEv: 0, popQ: [], muted: false };
+  var S = null;                 // ホスト(またはソロ)だけが持つ本物のゲーム状態
+  var members = [];             // ホスト側: [{name, bot, conn}]
+  var peer = null, conn = null, timer = null, roomCode = '';
+
+  /* ---------- 絵(SVG) ---------- */
+  var GEM = '<svg viewBox="0 0 24 24"><polygon points="6,3 18,3 23,9 12,22 1,9" fill="#2aa7e0"/><polygon points="6,3 12,9 1,9" fill="#8adcf8"/><polygon points="6,3 18,3 12,9" fill="#d6f4ff"/><polygon points="18,3 23,9 12,9" fill="#5cc4ee"/><polygon points="1,9 12,22 12,9" fill="#1c86bb"/><polygon points="12,9 23,9 12,22" fill="#176f9e"/></svg>';
+  var SKULL = '<svg viewBox="0 0 24 24"><path d="M12 2C7 2 4 5.5 4 10c0 2.6 1.2 4.4 3 5.6V19h3v-2h1v2h2v-2h1v2h3v-3.4c1.8-1.2 3-3 3-5.6 0-4.5-3-8-8-8z" fill="#f2eee3"/><circle cx="8.5" cy="10.5" r="2.3" fill="#1b1b20"/><circle cx="15.5" cy="10.5" r="2.3" fill="#1b1b20"/><path d="M12 13l-1.4 2.6h2.8z" fill="#1b1b20"/></svg>';
+
+  var FIG = [
+    { n: 'ソクラテス', j: '哲学者', bg: '#d9c7a0', hair: '#cfcfcf', style: 'bald', beard: 'long', sym: 'Σ' },
+    { n: 'プラトン', j: '哲学者', bg: '#b9cfe0', hair: '#9a9a9a', style: 'hair', beard: 'long', sym: 'Φ' },
+    { n: 'アリストテレス', j: '哲学者', bg: '#cfe0b9', hair: '#5a4030', style: 'hair', beard: 'short', sym: 'Α' },
+    { n: 'アルキメデス', j: '数学者', bg: '#e0c9b9', hair: '#bdbdbd', style: 'bald', beard: 'short', sym: 'π' },
+    { n: 'ピタゴラス', j: '数学者', bg: '#e0d9b9', hair: '#e8e8e8', style: 'band', beard: 'long', sym: 'Δ' },
+    { n: 'ヒポクラテス', j: '医学者', bg: '#b9e0d4', hair: '#a8a8a8', style: 'hair', beard: 'long', sym: 'Ξ' },
+    { n: 'ホメロス', j: '詩人', bg: '#e0b9c9', hair: '#d0d0d0', style: 'laurel', beard: 'long', sym: 'Ω' },
+    { n: 'ペリクレス', j: '政治家', bg: '#c9b9e0', hair: '#6b4a2a', style: 'helmet', beard: 'none', sym: 'Θ' }
+  ];
+  function figSVG(id) {
+    var f = FIG[id] || FIG[0], h = f.hair, s = '<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">';
+    s += '<rect width="100" height="130" fill="' + f.bg + '"/>';
+    s += '<path d="M10 130 Q12 90 50 86 Q88 90 90 130Z" fill="#f4efe4"/><path d="M30 130 Q36 100 50 96 Q64 100 70 130" fill="none" stroke="#c9a23a" stroke-width="3"/>';
+    s += '<rect x="43" y="72" width="14" height="18" fill="#e3b088"/>';
+    if (f.beard === 'long') s += '<path d="M29 54 Q30 92 50 98 Q70 92 71 54 Q62 72 50 72 Q38 72 29 54Z" fill="' + h + '"/>';
+    if (f.beard === 'short') s += '<path d="M30 58 Q35 80 50 82 Q65 80 70 58 Q60 68 50 68 Q40 68 30 58Z" fill="' + h + '"/>';
+    s += '<ellipse cx="50" cy="50" rx="22" ry="26" fill="#f0c9a0"/>';
+    if (f.beard === 'long') s += '<path d="M30 54 Q32 72 50 76 Q68 72 70 54 Q62 64 50 64 Q38 64 30 54Z" fill="' + h + '" opacity=".0"/>';
+    if (f.style === 'bald') s += '<path d="M28 48 Q26 34 36 30 L34 50Z" fill="' + h + '"/><path d="M72 48 Q74 34 64 30 L66 50Z" fill="' + h + '"/>';
+    if (f.style === 'hair' || f.style === 'band' || f.style === 'laurel') s += '<path d="M27 50 Q22 18 50 18 Q78 18 73 50 Q68 32 50 32 Q32 32 27 50Z" fill="' + h + '"/>';
+    if (f.style === 'band') s += '<rect x="27" y="30" width="46" height="5" fill="#b3402f"/>';
+    if (f.style === 'laurel') {
+      for (var i = 0; i < 9; i++) { var a = Math.PI * (1.05 + i * 0.113); var x = 50 + 25 * Math.cos(a), y = 44 + 28 * Math.sin(a); s += '<ellipse cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" rx="5" ry="2.6" transform="rotate(' + ((a * 180 / Math.PI) + 90).toFixed(0) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')" fill="#3f8f3a"/>'; }
+    }
+    if (f.style === 'helmet') s += '<path d="M25 46 Q25 14 50 14 Q75 14 75 46 L70 46 Q68 28 50 28 Q32 28 30 46Z" fill="#c08a3a"/><rect x="47" y="4" width="6" height="14" fill="#b3402f"/>';
+    if (id === 6) s += '<path d="M38 50 Q41 53 44 50 M56 50 Q59 53 62 50" stroke="#333" stroke-width="2" fill="none"/>';
+    else s += '<circle cx="41" cy="50" r="2.3" fill="#2a2a2a"/><circle cx="59" cy="50" r="2.3" fill="#2a2a2a"/><path d="M36 44 L46 43 M54 43 L64 44" stroke="' + h + '" stroke-width="2.2"/>';
+    s += '<path d="M44 64 Q50 67 56 64" stroke="#a5573f" stroke-width="2" fill="none"/>';
+    s += '<text x="92" y="22" font-size="17" font-weight="bold" fill="#7a5a1a" text-anchor="end" font-family="serif">' + f.sym + '</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  /* ---------- 音 ---------- */
+  var AC = null, heartTimer = null, heartOn = false, heartBpm = 70;
+  function ac() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+    if (AC && AC.state === 'suspended') { try { AC.resume(); } catch (e) {} }
+    return AC;
+  }
+  function tone(freq, dur, type, vol, delay, slide) {
+    if (ui.muted || !ac()) return;
+    var t0 = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.3, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  function beatOnce() { tone(75, 0.2, 'sine', 0.95, 0, 40); tone(60, 0.22, 'sine', 0.8, 0.2, 34); }
+  function heartLoop() {
+    if (!heartOn) return;
+    beatOnce();
+    heartTimer = setTimeout(heartLoop, 60000 / heartBpm);
+  }
+  function heartCtl(v) {
+    var on = (v.phase === 'bidding' || v.phase === 'flipping') && !ui.muted;
+    if (v.bid) heartBpm = 62 + 78 * (v.bid.n / Math.max(1, v.total));
+    if (on && !heartOn) { heartOn = true; heartLoop(); }
+    if (!on && heartOn) { heartOn = false; clearTimeout(heartTimer); }
+  }
+  function playEv(e) {
+    switch (e.k) {
+      case 'place': tone(520, 0.07, 'square', 0.12); tone(260, 0.09, 'square', 0.1, 0.05); break;
+      case 'declare': tone(220, 0.35, 'sawtooth', 0.18, 0, 110); break;
+      case 'raise': tone(330, 0.12, 'triangle', 0.25); tone(440, 0.15, 'triangle', 0.25, 0.1); break;
+      case 'pass': tone(200, 0.15, 'sine', 0.2, 0, 150); break;
+      case 'flip': if (e.t === 'skull') { tone(110, 0.8, 'sawtooth', 0.35, 0, 40); } else { tone(880, 0.25, 'sine', 0.3); tone(1320, 0.3, 'sine', 0.2, 0.08); } break;
+      case 'success': [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.3, 'triangle', 0.3, i * 0.1); }); break;
+      case 'fail': tone(150, 0.9, 'sawtooth', 0.3, 0.1, 50); break;
+      case 'win': [523, 659, 784, 1047, 784, 1047, 1319].forEach(function (f, i) { tone(f, 0.3, 'triangle', 0.3, i * 0.14); }); break;
+    }
+  }
+
+  /* ---------- 小さな部品 ---------- */
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast.h); toast.h = setTimeout(function () { t.style.display = 'none'; }, 2400);
+  }
+  function showScreen(name) {
+    ['lobby', 'room', 'game'].forEach(function (k) { $(k).classList.toggle('hidden', k !== name); });
+    $('topbar').classList.toggle('hidden', name === 'lobby');
+  }
+  function tileHTML(t, up, o) {
+    o = o || {};
+    var cls = 'tile ' + (up ? 'up ' + t : 'down') + (o.target ? ' target' : '');
+    var inner = '';
+    if (up) inner = t === 'skull' ? SKULL : GEM;
+    else if (o.peek && t) inner = '<span class="peek">' + (t === 'skull' ? SKULL : GEM) + '</span>';
+    return '<div class="' + cls + '"' + (o.idx != null ? ' data-idx="' + o.idx + '"' : '') + (o.place ? ' data-place="' + t + '"' : '') + '>' + inner + '</div>';
+  }
+  function cardsHTML(p) {
+    var h = '<div class="cards">';
+    for (var i = 0; i < 2; i++) {
+      if (p.cards[i] != null) h += '<div class="cslot" title="' + esc(FIG[p.cards[i]].n) + '">' + figSVG(p.cards[i]) + '</div>';
+      else h += '<div class="cslot"></div>';
+    }
+    return h + '</div>';
+  }
+
+  /* ---------- 描画 ---------- */
+  function bannerText(v) {
+    var me = v.you, nm = function (i) { return esc(v.players[i].name); };
+    if (v.phase === 'place1') return v.turn === me ? '最初の石版を1枚、伏せて置いてください(下の手持ちをタップ)' : nm(v.turn) + ' が最初の石版を置いています…';
+    if (v.phase === 'turn') return v.turn === me ? 'あなたの番:石版を1枚置く か 数を宣言する' : nm(v.turn) + ' の番です';
+    if (v.phase === 'bidding') {
+      return v.turn === me ? nm(v.bid.by) + ' が「' + v.bid.n + '」を宣言中。上げるか、パスするか選んでください'
+                           : nm(v.turn) + ' が考え中…(いま ' + nm(v.bid.by) + ' が「' + v.bid.n + '」)';
+    }
+    if (v.phase === 'flipping') {
+      var left = v.toFlip - v.flipCount;
+      if (v.challenger === me) return v.pendingOwn ? 'あなたの石版をめくっています…' : '相手の石版をタップしてめくろう(あと' + left + '枚)';
+      return nm(v.challenger) + ' が石版をめくっています(あと' + left + '枚)';
+    }
+    if (v.phase === 'result') return '結果発表!';
+    return '';
+  }
+
+  function seatHTML(v, i, isMe) {
+    var p = v.players[i];
+    var canFlip = v.phase === 'flipping' && v.challenger === v.you && !v.pendingOwn && !isMe && !p.out;
+    var topIdx = -1;
+    for (var k = p.stack.length - 1; k >= 0; k--) if (!p.stack[k].up) { topIdx = k; break; }
+    var cls = 'seat' + (isMe ? ' me' : '') + (v.turn === i && ['place1', 'turn', 'bidding', 'flipping'].indexOf(v.phase) >= 0 ? ' turn' : '') + (p.out ? ' out' : '') + (p.passed && v.phase === 'bidding' ? ' passed' : '');
+    var h = '<div class="' + cls + '" data-seat="' + i + '">';
+    h += '<div class="nm">' + (isMe ? 'あなた' : esc(p.name)) + (p.bot ? '<span class="cpu">CPU</span>' : '') + '</div>';
+    h += cardsHTML(p);
+    h += '<div class="pile' + (canFlip && topIdx >= 0 ? ' flippable' : '') + '" data-flip="' + i + '">';
+    p.stack.forEach(function (s, idx) { h += tileHTML(s.t, s.up, { idx: idx, peek: isMe, target: canFlip && idx === topIdx }); });
+    h += '</div>';
+    h += '<div class="meta">' + (p.out ? '脱落' : '手持ち ' + p.handCount + '枚 / 場 ' + p.stack.length + '枚') + '</div>';
+    if (isMe) h += meExtraHTML(v);
+    return h + '</div>';
+  }
+
+  function meExtraHTML(v) {
+    var me = v.you, myTurn = v.turn === me && !v.players[me].out;
+    var canPlace = myTurn && (v.phase === 'place1' || v.phase === 'turn') && v.myHand.length > 0;
+    var h = '<div class="handlabel">手持ちの石版' + (canPlace ? '(タップして伏せて置く)' : '') + '</div>';
+    h += '<div class="hand' + (canPlace ? '' : ' off') + '">';
+    var hand = v.myHand.slice().sort(function (a, b) { return a === b ? 0 : (a === 'gem' ? -1 : 1); });
+    hand.forEach(function (t) { h += tileHTML(t, true, { place: canPlace }); });
+    if (!hand.length) h += '<span class="meta" style="align-self:center">手持ちなし</span>';
+    h += '</div><div class="acts">';
+
+    var min = 0, max = 0, mode = null;
+    if (myTurn && v.phase === 'turn') { mode = 'bid'; min = 1; max = v.total; }
+    if (myTurn && v.phase === 'bidding') { mode = 'raise'; min = v.bid.n + 1; max = v.total; }
+    if (mode) {
+      var key = v.phase + ':' + (v.bid ? v.bid.n : 0) + ':' + v.turn;
+      if (ui.nKey !== key) { ui.nKey = key; ui.n = min; }
+      if (ui.n < min) ui.n = min;
+      if (ui.n > max) ui.n = max;
+      h += '<div class="stepper"><button class="gray" data-step="-1">−</button><div class="num">' + ui.n + '</div><button class="gray" data-step="1">＋</button></div>';
+      h += '<button class="gold" data-do="bid">' + (mode === 'bid' ? '宣言する' : 'この数に上げる') + '</button>';
+      if (mode === 'raise') h += '<button class="red" data-do="pass">パス</button>';
+    } else if (myTurn && v.phase === 'flipping' && !v.pendingOwn) {
+      h += '<span class="meta">相手の石版をタップしてください</span>';
+    } else if (!v.players[me].out && ['place1', 'turn', 'bidding'].indexOf(v.phase) >= 0 && v.bid && v.bid.by === me) {
+      h += '<span class="meta">あなたが宣言中。他の人の返事を待っています</span>';
+    }
+    return h + '</div>';
+  }
+
+  function centerHTML(v) {
+    var h = '<div class="banner">' + bannerText(v) + '</div>';
+    if (v.bid && (v.phase === 'bidding' || v.phase === 'flipping')) {
+      var dur = (60 / Math.max(50, heartBpm)).toFixed(2);
+      h += '<div class="bidbox"><span class="heart" style="animation-duration:' + dur + 's">♥</span><span>' + esc(v.players[v.bid.by].name) + ' の宣言</span><b>' + v.bid.n + '</b><span>枚 / 場に' + v.total + '枚</span></div>';
+    } else if (v.phase === 'turn' || v.phase === 'place1') {
+      h += '<div class="meta">場の石版: ' + v.total + '枚</div>';
+    }
+    return h;
+  }
+
+  function overlayHTML(v) {
+    if (v.phase !== 'result' && v.phase !== 'over') return '';
+    var r = v.result, nm = function (i) { return esc(v.players[i].name); };
+    var h = '', block = v.phase === 'over';
+    h += '<div class="ov' + (block ? ' block' : '') + '"><div class="ovbox">';
+    if (v.phase === 'over') {
+      var w = v.winner, bycards = v.players[w].cards.length >= 2;
+      h += '<h2>🏆 ' + (w === v.you ? 'あなたの勝利!' : nm(w) + ' の勝利!') + '</h2>';
+      h += '<p>' + (bycards ? '偉人カードを2枚そろえました' : '最後まで石版が残りました') + '</p>';
+      if (r && r.ok) h += '<div class="bigcard">' + figSVG(r.face) + '</div><div class="cardname">' + esc(FIG[r.face].n) + '</div>';
+      if (ui.role === 'client') h += '<p class="meta">ホストが次の対戦を始めるのを待っています</p>';
+      else h += '<button class="gold full" data-restart="1">もう一度あそぶ</button>';
+      h += '<button class="gray full" data-reload="1">ロビーに戻る</button>';
+    } else if (r && r.ok) {
+      h += '<h2>宣言成功!</h2><p>' + nm(r.seat) + ' が偉人カードをめくりました</p>';
+      h += '<div class="bigcard">' + figSVG(r.face) + '</div><div class="cardname">' + esc(FIG[r.face].n) + '(' + FIG[r.face].j + ')</div>';
+    } else if (r) {
+      var own = r.skullSeat === r.seat;
+      h += '<h2>💀 ドクロ!</h2>';
+      h += '<p>' + nm(r.seat) + ' は ' + (own ? '自分' : nm(r.skullSeat) + ' ') + 'のドクロをめくってしまった…</p>';
+      h += '<p>' + nm(r.seat) + ' は石版を1枚失いました' + (r.eliminated ? '。<b>すべて失って脱落!</b>' : '') + '</p>';
+    }
+    return h + '</div></div>';
+  }
+
+  function render(v) {
+    ui.view = v;
+    showScreen('game');
+    v.ev.forEach(function (e) {
+      if (e.id > ui.lastEv) { ui.lastEv = e.id; playEv(e); if (e.k === 'flip') ui.popQ.push(e); }
+    });
+    heartCtl(v);
+    var me = v.you, n = v.players.length, h = '<div id="table"><div class="opps">';
+    for (var k = 1; k < n; k++) h += seatHTML(v, (me + k) % n, false);
+    h += '</div><div class="center">' + centerHTML(v) + '</div>' + seatHTML(v, me, true) + '</div>' + overlayHTML(v);
+    $('game').innerHTML = h;
+    $('roomLabel').textContent = roomCode ? '合言葉: ' + roomCode : (ui.role === 'solo' ? 'ひとり練習' : '');
+    ui.popQ.forEach(function (e) {
+      var el = document.querySelector('.seat[data-seat="' + e.seat + '"] .tile[data-idx="' + e.idx + '"]');
+      if (el) el.classList.add('pop');
+    });
+    ui.popQ = [];
+  }
+
+  /* ---------- ホスト側: ゲーム進行 ---------- */
+  function broadcast() {
+    members.forEach(function (m, i) {
+      var v = Engine.makeView(S, i);
+      if (i === 0) render(v);
+      else if (m.conn && m.conn.open) { try { m.conn.send({ t: 'view', v: v }); } catch (e) {} }
+    });
+    S.events = [];
+  }
+  function schedule() {
+    clearTimeout(timer); timer = null;
+    if (!S || S.phase === 'over') return;
+    if (S.phase === 'result') { timer = setTimeout(function () { Engine.nextRound(S); sync(); }, 4200); return; }
+    if (S.phase === 'flipping' && Engine.pendingOwn(S)) { timer = setTimeout(function () { Engine.tick(S); sync(); }, 1000); return; }
+    var cur = S.turn, P = S.players[cur];
+    if (P && P.bot) {
+      timer = setTimeout(function () {
+        var a = Engine.botAct(S, cur);
+        if (a) Engine.act(S, cur, a);
+        sync();
+      }, 1200 + Math.random() * 900);
+    }
+  }
+  function sync() { broadcast(); schedule(); }
+  function startGame() {
+    var old = S ? S.evSeq : 0;
+    S = Engine.createGame(members.map(function (m) { return { name: m.name, bot: m.bot }; }));
+    S.evSeq = old;
+    ui.lastEv = old;
+    sync();
+  }
+  function sendAct(a) {
+    ac();
+    if (ui.role === 'client') { if (conn && conn.open) conn.send({ t: 'act', a: a }); return; }
+    if (!S) return;
+    var r = Engine.act(S, 0, a);
+    if (!r.ok) toast(r.msg);
+    sync();
+  }
+
+  /* ---------- ロビー・部屋 ---------- */
+  function myName() { var n = $('name').value.trim(); try { if (n) localStorage.setItem('dokuro_name', n); } catch (e) {} return n || 'プレイヤー'; }
+  try { $('name').value = localStorage.getItem('dokuro_name') || ''; } catch (e) {}
+
+  $('soloBtn').addEventListener('click', function () {
+    ac(); ui.role = 'solo'; roomCode = '';
+    members = [{ name: myName() }, { name: 'CPU 1', bot: true }, { name: 'CPU 2', bot: true }, { name: 'CPU 3', bot: true }];
+    startGame();
+  });
+
+  function loadPeer() {
+    return new Promise(function (resolve, reject) {
+      if (window.Peer) return resolve();
+      var urls = ['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];
+      (function next(i) {
+        if (i >= urls.length) return reject(new Error('load'));
+        var s = document.createElement('script');
+        s.src = urls[i];
+        s.onload = function () { window.Peer ? resolve() : next(i + 1); };
+        s.onerror = function () { next(i + 1); };
+        document.head.appendChild(s);
+      })(0);
+    });
+  }
+  function genCode() {
+    var a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', c = '';
+    for (var i = 0; i < 4; i++) c += a[Math.floor(Math.random() * a.length)];
+    return c;
+  }
+
+  function roomHTML() {
+    var h = '<div class="sub">友達にこの合言葉を伝えてください</div><div class="code">' + esc(roomCode) + '</div>';
+    h += '<ul class="plist">';
+    members.forEach(function (m, i) {
+      h += '<li><span>' + (i === 0 ? '👑 ' : '') + esc(m.name) + (m.bot ? ' (CPU)' : '') + '</span>' + (m.bot ? '<button class="gray small" data-rmcpu="' + i + '">外す</button>' : '') + '</li>';
+    });
+    h += '</ul>';
+    h += '<button class="full" data-addcpu="1"' + (members.length >= 4 ? ' disabled' : '') + '>CPUを追加</button>';
+    h += '<button class="gold full" data-startgame="1"' + (members.length < 2 ? ' disabled' : '') + '>ゲーム開始(' + members.length + '人)</button>';
+    h += '<div class="meta" style="margin-top:8px">最大4人。ホスト(あなた)がこの画面を閉じると、ゲームは終了します。</div>';
+    return h;
+  }
+  function renderRoomHost() { $('roomTitle').textContent = 'あなたの部屋'; $('roomBody').innerHTML = roomHTML(); }
+  function broadcastLobby() {
+    var names = members.map(function (m) { return m.name + (m.bot ? ' (CPU)' : ''); });
+    members.forEach(function (m, i) { if (m.conn && m.conn.open) { try { m.conn.send({ t: 'lobby', names: names, you: i }); } catch (e) {} } });
+    renderRoomHost();
+  }
+
+  $('createBtn').addEventListener('click', function () {
+    ac();
+    var btn = $('createBtn'); btn.disabled = true; btn.textContent = '準備中…';
+    loadPeer().then(function () {
+      ui.role = 'host';
+      members = [{ name: myName() }];
+      var tries = 0;
+      function open() {
+        roomCode = genCode();
+        peer = new Peer('dokuro-' + roomCode);
+        peer.on('open', function () { showScreen('room'); renderRoomHost(); });
+        peer.on('error', function (e) {
+          if (e.type === 'unavailable-id' && tries++ < 5) { try { peer.destroy(); } catch (x) {} open(); return; }
+          toast('接続エラー: ' + (e.type || 'unknown'));
+        });
+        peer.on('connection', onGuest);
+      }
+      open();
+    }).catch(function () {
+      toast('オンライン用の部品を読み込めませんでした。ネット接続を確認してください');
+    }).then(function () { btn.disabled = false; btn.textContent = '部屋を作る(友達と対戦)'; });
+  });
+
+  function onGuest(c) {
+    var member = null;
+    c.on('data', function (m) {
+      if (!m) return;
+      if (m.t === 'hello') {
+        if (S) { c.send({ t: 'full', msg: 'このゲームはもう始まっています' }); return; }
+        if (members.length >= 4) { c.send({ t: 'full', msg: '部屋が満員です(最大4人)' }); return; }
+        member = { name: String(m.name || 'ゲスト').slice(0, 8), conn: c };
+        members.push(member);
+        broadcastLobby();
+      } else if (m.t === 'act' && S && member) {
+        var seat = members.indexOf(member);
+        var r = Engine.act(S, seat, m.a);
+        if (!r.ok) { try { c.send({ t: 'err', msg: r.msg }); } catch (e) {} }
+        sync();
+      }
+    });
+    c.on('close', function () {
+      if (!member) return;
+      var seat = members.indexOf(member);
+      if (!S) { members.splice(seat, 1); broadcastLobby(); return; }
+      member.bot = true; member.name += '(退出)'; member.conn = null;
+      S.players[seat].bot = true; S.players[seat].name = member.name;
+      toast(member.name + ' が退出しました。CPUが代わりに続けます');
+      sync();
+    });
+  }
+
+  $('joinBtn').addEventListener('click', function () {
+    ac();
+    var code = $('code').value.trim().toUpperCase();
+    if (code.length !== 4) { toast('合言葉は4文字です'); return; }
+    var btn = $('joinBtn'); btn.disabled = true;
+    var done = false;
+    loadPeer().then(function () {
+      ui.role = 'client'; roomCode = code;
+      peer = new Peer();
+      peer.on('open', function () {
+        conn = peer.connect('dokuro-' + code, { reliable: true });
+        conn.on('open', function () { done = true; conn.send({ t: 'hello', name: myName() }); });
+        conn.on('data', onHostMsg);
+        conn.on('close', function () { toast('ホストとの接続が切れました'); setTimeout(function () { location.reload(); }, 2500); });
+        setTimeout(function () { if (!done) { toast('部屋に入れませんでした。合言葉を確認してください'); btn.disabled = false; } }, 12000);
+      });
+      peer.on('error', function (e) {
+        toast(e.type === 'peer-unavailable' ? 'その合言葉の部屋が見つかりません' : '接続エラー: ' + (e.type || 'unknown'));
+        btn.disabled = false;
+      });
+    }).catch(function () { toast('オンライン用の部品を読み込めませんでした'); btn.disabled = false; });
+  });
+
+  function onHostMsg(m) {
+    if (!m) return;
+    if (m.t === 'lobby') {
+      showScreen('room');
+      $('roomTitle').textContent = '部屋 ' + roomCode;
+      var h = '<div class="sub">ホストがゲームを始めるのを待っています…</div><ul class="plist">';
+      m.names.forEach(function (n, i) { h += '<li><span>' + (i === 0 ? '👑 ' : '') + esc(n) + (i === m.you ? '(あなた)' : '') + '</span></li>'; });
+      $('roomBody').innerHTML = h + '</ul>';
+    } else if (m.t === 'view') {
+      render(m.v);
+    } else if (m.t === 'full') {
+      toast(m.msg); setTimeout(function () { location.reload(); }, 2500);
+    } else if (m.t === 'err') {
+      toast(m.msg);
+    }
+  }
+
+  /* ---------- クリック処理 ---------- */
+  document.addEventListener('pointerdown', function () { ac(); });
+  $('roomBody').addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t) return;
+    if (t.hasAttribute('data-addcpu') && members.length < 4) {
+      var k = members.filter(function (m) { return m.bot; }).length + 1;
+      members.push({ name: 'CPU ' + k, bot: true }); broadcastLobby();
+    } else if (t.hasAttribute('data-rmcpu')) {
+      members.splice(parseInt(t.getAttribute('data-rmcpu'), 10), 1); broadcastLobby();
+    } else if (t.hasAttribute('data-startgame') && members.length >= 2) {
+      startGame();
+    }
+  });
+  $('game').addEventListener('click', function (e) {
+    var v = ui.view; if (!v) return;
+    var t = e.target.closest('[data-place],[data-step],[data-do],[data-flip],[data-restart],[data-reload]');
+    if (!t) return;
+    if (t.hasAttribute('data-place')) sendAct({ k: 'place', t: t.getAttribute('data-place') });
+    else if (t.hasAttribute('data-step')) { ui.n += parseInt(t.getAttribute('data-step'), 10); render(v); }
+    else if (t.getAttribute('data-do') === 'bid') sendAct({ k: 'bid', n: ui.n });
+    else if (t.getAttribute('data-do') === 'pass') sendAct({ k: 'pass' });
+    else if (t.hasAttribute('data-flip')) { if (t.classList.contains('flippable')) sendAct({ k: 'flip', seat: parseInt(t.getAttribute('data-flip'), 10) }); }
+    else if (t.hasAttribute('data-restart')) { if (ui.role !== 'client') startGame(); }
+    else if (t.hasAttribute('data-reload')) location.reload();
+  });
+  // 確認用の入口(通常は使いません): #solo で即ひとり練習、#demo でCPU同士の自動対戦
+  if (location.hash === '#solo') $('soloBtn').click();
+  if (location.hash === '#demo') {
+    ui.role = 'solo';
+    members = [{ name: 'テスト', bot: true }, { name: 'CPU 1', bot: true }, { name: 'CPU 2', bot: true }, { name: 'CPU 3', bot: true }];
+    startGame();
+  }
+  $('muteBtn').addEventListener('click', function () {
+    ui.muted = !ui.muted;
+    this.textContent = ui.muted ? '🔇 音なし' : '🔊 音あり';
+    if (ui.muted) { heartOn = false; clearTimeout(heartTimer); }
+    else if (ui.view) heartCtl(ui.view);
+  });
+})();
+</script>
+</body>
+</html>
